@@ -1,5 +1,5 @@
 import argparse
-from os import system
+from os import system, path, chdir, getcwd
 import sys
 import getpass
 import subprocess
@@ -43,7 +43,7 @@ backup.add_argument("--kde",
                     help="create a backup of all kde config")
 backup.add_argument("--restore-kde", dest="", help="restore kde config files")
 
-args, unknown = parser.parse_known_args("--pikaurInstall test2".split())
+args, unknown = parser.parse_known_args()
 
 
 def baseSystemInstall(pathInstall, pstrapPkgFile):
@@ -52,73 +52,78 @@ def baseSystemInstall(pathInstall, pstrapPkgFile):
         for pkg in file:
             command += (pkg.strip() + " ")
         if input("Are you sure you want to continue? [y/N] ").lower() == "y":
-            #system(command)
-            print(command)
+            system(command)
+            #print(command)
 
 
 def installPacman(pkgFile):
     with open(pkgFile) as pkgList:
-        command = "pacman -S "
+        command = "pacman -S --needed "
         for pkg in pkgList:
             command += (pkg.strip() + " ")
         if (getpass.getuser() == "root"):
-            #system(command)
-            print(command)
+            system(command)
+            #print(command)
         else:
             exit("You need root permissions to do this")
 
 
 def installPikaur(pkgFile):
-    checkPikaur = subprocess.run(["pikaur", "-h"])
-    if checkPikaur.returncode != 0:
-        if input("Do you want to install pikaur? y/N] ").lower() == "y":
-            system("git clone https://aur.archlinux.org/pikaur.git")
-            system("cd pikaur")
-            system("makepkg -fsri")
-            system("cd .. & rm -r pikaur")
-        else:
+    if not path.isfile("/usr/bin/pikaur"):
+        flag = True
+        choise = input("Do you want to install pikaur? [Y/n] ").strip().lower()
+        if (choise != "y") and (choise != "n") and (choise != ''):
+            exit("Input not valid")
+        elif choise == "n":
             exit("Pikaur needed")
-    else:
-        with open(pkgFile) as pkgList:
-            command = "pikaur -S "
-            for pkg in pkgList:
-                command += (pkg.strip() + " ")
-            if (getpass.getuser() != "root"):
-                #system(command)
-                print(command)
-            else:
-                exit("You not need root permissions to do this")
+        if flag:
+            oldCwd = getcwd()
+            system("git clone https://aur.archlinux.org/pikaur.git")
+            chdir("pikaur")
+            system("makepkg -fsri")
+            chdir(oldCwd)
+            system("rm -r pikaur")
+    with open(pkgFile) as pkgList:
+        command = "pikaur -S --nodiff --noedit"
+        for pkg in pkgList:
+            command += (pkg.strip() + " ")
+        if (getpass.getuser() != "root"):
+            system(command)
+            #print(command)
+        else:
+            exit("You not need root permissions to do this")
 
 
 def backupPkgs(pkgFile, isPacman=True):
     with open(pkgFile, "w") as pkgList:
         if isPacman:
-            proc = subprocess.run(["pacman", "-Qqm"], capture_output=True)
-        else:
             proc = subprocess.run(
                 'pacman -Qqe | grep -vx "$(pacman -Qqg base-devel)" | grep -vx "$(pacman -Qqm)"',
                 shell=True,
                 capture_output=True)
+        else:
+            proc = subprocess.run(["pacman", "-Qqm"], capture_output=True)
         pkgList.write(proc.stdout.decode("utf-8"))
 
 
 if __name__ == '__main__':
-    '''
     if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
-'''
+        
     if len(unknown) > 0:
         parser.error("Unknown flag: " + " ".join(map(str, unknown)))
-    if args.base_system is not None:
-        baseSystemInstall(args.base_system[0][:-1], args.base_system[1])
-    if args.pkgFile is not None:
-        installPacman(args.pkgFile)
-    if args.aurPkgFile is not None:
-        installPikaur(args.pkgFile)
-    if args.pkgFileBack is not None:
-        backupPkgs(args.pkgFileBack)
-    if args.aurPkgFileBack is not None:
-        backupPkgs(args.aurPkgFileBack, False)
-    if args.kde:
-        print("kde")
+    if "pkgFileBack" in args:
+        if args.pkgFileBack is not None:
+            backupPkgs(args.pkgFileBack)
+        if args.aurPkgFileBack is not None:
+            backupPkgs(args.aurPkgFileBack, False)
+        if args.kde:
+            print("kde")
+    else:
+        if args.base_system is not None:
+            baseSystemInstall(args.base_system[0], args.base_system[1])
+        if args.pkgFile is not None:
+            installPacman(args.pkgFile)
+        if args.aurPkgFile is not None:
+            installPikaur(args.aurPkgFile)
