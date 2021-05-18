@@ -1,0 +1,13 @@
+base
+base-devel
+linux
+linux-firmware
+amd-ucode
+vim
+btrfs-progs
+grub
+grub-btrfs
+efibootmgr
+os-prober
+networkmanager
+zsh
