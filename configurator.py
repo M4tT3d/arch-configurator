@@ -1,14 +1,51 @@
+#!/usr/bin/env python3
 import argparse
-from os import system, path, chdir, getcwd
+from os import system, path, chdir, getcwd, environ, walk
 import sys
 import getpass
 import subprocess
+from zipfile import ZipFile
+
+#KDE paths
+kdePath = {
+    "globalTheme": [
+        ".config/kdeglobals", ".config/kscreenlockerrc", ".config/kwinrc",
+        ".config/gtkrc", ".config/gtkrc-2.0", ".config/gtk-4.0/",
+        ".config/gtk-3.0/", ".config/gtk-2.0/", ".config/ksplashrc"
+    ],
+    "plasmaStyle": ".config/plasmarc",
+    "colors": ".config/Trolltech.conf",
+    "windowDecorations": ".config/kwinrulesrc",
+    "fonts": ".config/kcmfonts",
+    "cursors": ".config/kcminputrc",
+    "fontManagement": ".config/kfontinstuirc",
+    "shortcuts": [".config/kglobalshortcutsrc", ".config/khotkeysrc"],
+    "backgroundServices": ".config/kded5rc",
+    "desktopSession": ".config/ksmserverrc",
+    "search": [".config/krunnerrc", ".config/baloofilerc"],
+    "notifications": ".config/plasmanotifyrc",
+    "regionalSettings": [".config/plasma-localerc", ".config/ktimezonedrc"],
+    "accessibility": ".config/kaccessrc",
+    "userFeedback": ".config/PlasmaUserFeedback",
+    "layout": ".config/kxkbrc",
+    "gamma": ".config/kgammarc",
+    "energySaving": ".config/powermanagementprofilesrc"
+}
+
+for key in kdePath.keys():
+    if isinstance(kdePath[key], list):
+        for j in range(len(kdePath[key])):
+            kdePath[key][j] = path.join(environ["HOME"], kdePath[key][j])
+    else:
+        kdePath[key] = path.join(environ["HOME"], kdePath[key])
 
 parser = argparse.ArgumentParser(
     description=
     "utility to restore configuration on a new arch install. Files MUST have a package on every line",
     allow_abbrev=False)
 group = parser.add_mutually_exclusive_group()
+subparser = parser.add_subparsers(help="backup utility help")
+backup = subparser.add_parser("backup")
 
 group.add_argument("-i",
                    "--install",
@@ -16,20 +53,17 @@ group.add_argument("-i",
                    dest="pkgFile",
                    help="install packages from a file with pacman")
 group.add_argument(
-    "--pikaurInstall",
+    "--installPikaur",
     metavar="<aurPkgFile>",
     dest="aurPkgFile",
     help=
-    "install packages in file from aur with pikaur. If pikaur is not istalled, it will ask if it can be installed (default yes)"
+    "install packages in file from aur with pikaur. If pikaur is not istalled, it will ask if it can be installed"
 )
 group.add_argument(
     "--base-system",
     metavar=("<pathInstall>", "<strapPkgFile>"),
     nargs=2,
     help="install all packages in strapPkgFile with pacstrap into pathInstall")
-
-subparser = parser.add_subparsers(help="backup utility help")
-backup = subparser.add_parser("backup")
 backup.add_argument("--pacman",
                     dest="pkgFileBack",
                     metavar="<pkgFile>",
@@ -39,9 +73,14 @@ backup.add_argument("--aur",
                     metavar="<aurPkgFile>",
                     help="create file with all packages installed from aur")
 backup.add_argument("--kde",
-                    action="store_true",
+                    metavar="file.zip",
+                    const="kdeConfig.zip",
+                    nargs="?",
                     help="create a backup of all kde config")
-backup.add_argument("--restore-kde", dest="", help="restore kde config files")
+parser.add_argument("--restore-kde",
+                    metavar="<file.zip>",
+                    dest="backFile",
+                    help="restore kde config files")
 
 args, unknown = parser.parse_known_args()
 
@@ -70,21 +109,26 @@ def installPacman(pkgFile):
 
 def installPikaur(pkgFile):
     if not path.isfile("/usr/bin/pikaur"):
-        flag = True
         choise = input("Do you want to install pikaur? [Y/n] ").strip().lower()
         if (choise != "y") and (choise != "n") and (choise != ''):
             exit("Input not valid")
         elif choise == "n":
             exit("Pikaur needed")
-        if flag:
-            oldCwd = getcwd()
-            system("git clone https://aur.archlinux.org/pikaur.git")
-            chdir("pikaur")
-            system("makepkg -fsri")
-            chdir(oldCwd)
-            system("rm -r pikaur")
+        oldCwd = getcwd()
+        system("git clone https://aur.archlinux.org/pikaur.git")
+        chdir("pikaur")
+        system("makepkg -fsri")
+        chdir(oldCwd)
+        system("rm -r pikaur")
+        '''
+        print("git clone")
+        print("chdir")
+        print("installation")
+        print("chdir")
+        print("remove folder")
+        '''
     with open(pkgFile) as pkgList:
-        command = "pikaur -S --nodiff --noedit"
+        command = "pikaur -S --nodiff --noedit "
         for pkg in pkgList:
             command += (pkg.strip() + " ")
         if (getpass.getuser() != "root"):
@@ -106,11 +150,40 @@ def backupPkgs(pkgFile, isPacman=True):
         pkgList.write(proc.stdout.decode("utf-8"))
 
 
+def _zipdir(pathDir, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in walk(pathDir):
+        for file in files:
+            ziph.write(
+                path.join(root, file),
+                path.relpath(path.join(root, file), path.join(pathDir, '..')))
+
+
+def backupKDE(zipPath):
+    with ZipFile(zipPath, 'w') as zipF:
+        for key in kdePath.keys():
+            if isinstance(kdePath[key], list):
+                for val in kdePath[key]:
+                    if path.isdir(val):
+                        _zipdir(val, zipF)
+                    elif path.isfile(val):
+                        zipF.write(
+                            val,
+                            path.relpath(val,
+                                         path.join(path.split(val)[0], '.')))
+            elif path.isdir(kdePath[key]):
+                _zipdir(kdePath[key], zipF)
+            elif path.isfile(kdePath[key]):
+                zipF.write(
+                    kdePath[key],
+                    path.relpath(kdePath[key],
+                                 path.join(path.split(kdePath[key])[0], '.')))
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
-        
     if len(unknown) > 0:
         parser.error("Unknown flag: " + " ".join(map(str, unknown)))
     if "pkgFileBack" in args:
@@ -118,8 +191,8 @@ if __name__ == '__main__':
             backupPkgs(args.pkgFileBack)
         if args.aurPkgFileBack is not None:
             backupPkgs(args.aurPkgFileBack, False)
-        if args.kde:
-            print("kde")
+        if args.kde is not None:
+            backupKDE(args.kde)
     else:
         if args.base_system is not None:
             baseSystemInstall(args.base_system[0], args.base_system[1])
@@ -127,3 +200,6 @@ if __name__ == '__main__':
             installPacman(args.pkgFile)
         if args.aurPkgFile is not None:
             installPikaur(args.aurPkgFile)
+        if args.backFile is not None:
+            #TODO: function to restore kde settings
+            pass

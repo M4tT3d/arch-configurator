@@ -9,7 +9,8 @@ __pycache__/
 *$py.class
 
 #various files
-*.txt
+desktop/*
+laptop/*
 
 # C extensions
 *.so
@@ -158,7 +159,6 @@ Thumbs.db
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
 
