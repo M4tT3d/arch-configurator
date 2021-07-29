@@ -6,13 +6,28 @@ import getpass
 import subprocess
 from zipfile import ZipFile
 
-#KDE paths
+# KDE paths
 kdePath = {
+    "panel": ".config/plasma-org.kde.plasma.desktop-appletsrc",
     "globalTheme": [
         ".config/kdeglobals", ".config/kscreenlockerrc", ".config/kwinrc",
         ".config/gtkrc", ".config/gtkrc-2.0", ".config/gtk-4.0/",
         ".config/gtk-3.0/", ".config/gtk-2.0/", ".config/ksplashrc"
     ],
+    "kvantum": ".config/Kvantum",
+    "dolphin": ".config/dolphinrc",
+    "kate": [
+        ".config/katemetainfos", ".config/katerc", ".config/kateschemarc",
+        ".config/katesyntaxhighlightingrc", ".config/katevirc"
+    ],
+    "kcalc": ".config/kcalcrc",
+    "konsole": ".config/kconsolerc",
+    "okular": [
+        ".config/okular-generator-popplerrc",
+        ".config/okularpartrc",
+        ".config/okularrc",
+    ],
+    "userDir": ".config/user-dirs.dirs",
     "plasmaStyle": ".config/plasmarc",
     "colors": ".config/Trolltech.conf",
     "windowDecorations": ".config/kwinrulesrc",
@@ -81,6 +96,9 @@ parser.add_argument("--restore-kde",
                     metavar="<file.zip>",
                     dest="backFile",
                     help="restore kde config files")
+parser.add_argument("--base-config",
+                    dest="baseConfig",
+                    help="set a base configuration on a new arch installation")
 
 args, unknown = parser.parse_known_args()
 
@@ -92,17 +110,16 @@ def baseSystemInstall(pathInstall, pstrapPkgFile):
             command += (pkg.strip() + " ")
         if input("Are you sure you want to continue? [y/N] ").lower() == "y":
             system(command)
-            #print(command)
 
 
 def installPacman(pkgFile):
     with open(pkgFile) as pkgList:
         command = "pacman -S --needed "
         for pkg in pkgList:
-            command += (pkg.strip() + " ")
+            if "#" not in pkg:
+                command += (pkg.strip() + " ")
         if (getpass.getuser() == "root"):
             system(command)
-            #print(command)
         else:
             exit("You need root permissions to do this")
 
@@ -120,20 +137,13 @@ def installPikaur(pkgFile):
         system("makepkg -fsri")
         chdir(oldCwd)
         system("rm -r pikaur")
-        '''
-        print("git clone")
-        print("chdir")
-        print("installation")
-        print("chdir")
-        print("remove folder")
-        '''
     with open(pkgFile) as pkgList:
         command = "pikaur -S --nodiff --noedit "
         for pkg in pkgList:
-            command += (pkg.strip() + " ")
+            if "#" not in pkg:
+                command += (pkg.strip() + " ")
         if (getpass.getuser() != "root"):
             system(command)
-            #print(command)
         else:
             exit("You not need root permissions to do this")
 
@@ -179,6 +189,29 @@ def backupKDE(zipPath):
                     path.relpath(kdePath[key],
                                  path.join(path.split(kdePath[key])[0], '.')))
 
+def baseConfiguration():
+    if (getpass.getuser() == "root"):
+        # set time zone
+        zone = input("Insert time zone (ex Europe/Rome): ")
+        system(f"ln -sf /usr/share/zoneinfo/{zone} /etc/localtime")
+        system("hwclock --systohc")
+        # set italian and english in locale.gen
+        system("sed -i -e 's/#it_IT.UTF-8 UTF-8/it_IT.UTF-8 UTF-8/' /etc/locale.gen")
+        system("sed -i -e 's/#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen")
+        system('locale-gen')
+        # set keymap in vconsole
+        system("echo 'KEYMAP=it' > /etc/vconsole.conf")
+        # set hostname
+        hostname = input("Insert hostname: ")
+        system(f"echo '{hostname}' > /etc/hostname")
+        # create new user
+        user = input("Insert user id: ")
+        system(f"useradd -m -s /usr/bin/zsh {user}")
+        system(f"passwd {user}")
+    else:
+        exit("You need root permissions to do this")
+
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -203,3 +236,5 @@ if __name__ == '__main__':
         if args.backFile is not None:
             #TODO: function to restore kde settings
             pass
+        if args.baseConfig is not None:
+            baseConfiguration()

@@ -2,6 +2,7 @@ base
 base-devel
 linux
 linux-firmware
+linux-headers
 amd-ucode
 vim
 btrfs-progs
@@ -11,3 +12,6 @@ efibootmgr
 os-prober
 networkmanager
 zsh
+ntfs-3g
+reflector
+git
