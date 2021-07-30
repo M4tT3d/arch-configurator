@@ -216,7 +216,7 @@ def baseConfiguration():
         system("passwd root")
         # grub
         system("grub-install --target=x86_64-efi --efi-directory=/boot/efi/ --bootloader-id=GRUB")
-        system("sed -i -e 's/GRUB_THEME=\"\"/GRUB_THEME=\"/usr/share/grub/themes/Vimix/theme.txt\"/' /etc/locale.gen")
+        system("sed -i -e 's/#GRUB_THEME=\"/path/to/gfxtheme\"/GRUB_THEME=\"/usr/share/grub/themes/Vimix/theme.txt\"/' /etc/default/grub")
         system("grub-mkconfig -o /boot/grub/grub.cfg")
     else:
         exit("You need root permissions to do this")
