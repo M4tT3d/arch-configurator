@@ -98,18 +98,20 @@ parser.add_argument("--restore-kde",
                     help="restore kde config files")
 parser.add_argument("--base-config",
                     dest="baseConfig",
+                    nargs=0,
                     help="set a base configuration on a new arch installation")
 
 args, unknown = parser.parse_known_args()
 
 
 def baseSystemInstall(pathInstall, pstrapPkgFile):
-    command = "pacstrap " + pathInstall + " "
+    command = "pacstrap " + pathInstall[:-1] + " "
     with open(pstrapPkgFile) as file:
         for pkg in file:
             command += (pkg.strip() + " ")
         if input("Are you sure you want to continue? [y/N] ").lower() == "y":
             system(command)
+            system(f"genfstab -U '{pathInstall[:-1]}' >> '{pathInstall[:-1]}'/etc/fstab")
 
 
 def installPacman(pkgFile):
@@ -208,6 +210,9 @@ def baseConfiguration():
         user = input("Insert user id: ")
         system(f"useradd -m -s /usr/bin/zsh {user}")
         system(f"passwd {user}")
+        # root password
+        print("Change root password")
+        system("passwd root")
     else:
         exit("You need root permissions to do this")
 
