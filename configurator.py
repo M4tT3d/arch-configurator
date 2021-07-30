@@ -97,21 +97,22 @@ parser.add_argument("--restore-kde",
                     dest="backFile",
                     help="restore kde config files")
 parser.add_argument("--base-config",
-                    dest="baseConfig",
-                    nargs=0,
+                    action="store_true",
                     help="set a base configuration on a new arch installation")
 
 args, unknown = parser.parse_known_args()
 
 
 def baseSystemInstall(pathInstall, pstrapPkgFile):
-    command = "pacstrap " + pathInstall[:-1] + " "
+    if pathInstall[-1] == '/':
+        pathInstall = pathInstall[:-1]
+    command = "pacstrap " + pathInstall + " "
     with open(pstrapPkgFile) as file:
         for pkg in file:
             command += (pkg.strip() + " ")
         if input("Are you sure you want to continue? [y/N] ").lower() == "y":
             system(command)
-            system(f"genfstab -U '{pathInstall[:-1]}' >> '{pathInstall[:-1]}'/etc/fstab")
+            system(f"genfstab -U '{pathInstall}' >> '{pathInstall}'/etc/fstab")
 
 
 def installPacman(pkgFile):
@@ -241,5 +242,5 @@ if __name__ == '__main__':
         if args.backFile is not None:
             #TODO: function to restore kde settings
             pass
-        if args.baseConfig is not None:
+        if args.base_config:
             baseConfiguration()
