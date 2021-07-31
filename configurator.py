@@ -207,6 +207,13 @@ def baseConfiguration():
         # set hostname
         hostname = input("Insert hostname: ")
         system(f"echo '{hostname}' > /etc/hostname")
+        # set hosts
+        with open("/etc/hosts") as hosts:
+            data = hosts.readlines()
+            data.append("127.0.0.1 localhost\n")
+            data.append(f"127.0.0.1 {hostname}.localdomain {hostname}")
+        with open("/etc/hosts", "w") as hosts:
+            hosts.writelines(data)
         # create new user
         user = input("Insert user id: ")
         system(f"useradd -m -s /usr/bin/zsh {user}")
@@ -222,7 +229,7 @@ def baseConfiguration():
             for i in range(len(data)):
                 if choice.strip().lower() == "y":
                     if "GRUB_CMDLINE_LINUX=" in data[i]:
-                        data.insert(i + 1, "GRUB_DISABLE_OS_PROBER=false")
+                        data.insert(i + 1, "GRUB_DISABLE_OS_PROBER=false\n")
                 if "GRUB_THEME" in data[i]:
                     data[i] = "GRUB_THEME=\"/usr/share/grub/themes/Vimix/theme.txt\"\n\n"
                     break
