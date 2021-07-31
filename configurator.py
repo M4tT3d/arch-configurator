@@ -218,13 +218,18 @@ def baseConfiguration():
         system("grub-install --target=x86_64-efi --efi-directory=/boot/efi/ --bootloader-id=GRUB")
         with open("/etc/default/grub") as fin:
             data = fin.readlines()
+            choice = input("Do you want disable OS_PROBER? [y/N] ")
             for i in range(len(data)):
+                if choice.strip().lower() == "y":
+                    if "GRUB_CMDLINE_LINUX=" in data[i]:
+                        data.insert(i + 1, "GRUB_DISABLE_OS_PROBER=false")
                 if "GRUB_THEME" in data[i]:
                     data[i] = "GRUB_THEME=\"/usr/share/grub/themes/Vimix/theme.txt\"\n\n"
                     break
         with open("/etc/default/grub", "w") as fout:
             fout.writelines(data)
         system("grub-mkconfig -o /boot/grub/grub.cfg")
+        system("systemctl enable NetworkManager")
     else:
         exit("You need root permissions to do this")
 
