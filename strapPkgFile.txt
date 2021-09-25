@@ -3,13 +3,10 @@ base-devel
 linux
 linux-firmware
 linux-headers
-amd-ucode
 vim
 btrfs-progs
 grub
 grub-btrfs
-efibootmgr
-os-prober
 networkmanager
 zsh
 ntfs-3g

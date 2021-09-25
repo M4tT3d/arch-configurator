@@ -10,15 +10,24 @@ from zipfile import ZipFile
 kdePath = {
     "panel": ".config/plasma-org.kde.plasma.desktop-appletsrc",
     "globalTheme": [
-        ".config/kdeglobals", ".config/kscreenlockerrc", ".config/kwinrc",
-        ".config/gtkrc", ".config/gtkrc-2.0", ".config/gtk-4.0/",
-        ".config/gtk-3.0/", ".config/gtk-2.0/", ".config/ksplashrc"
+        ".config/kdeglobals",
+        ".config/kscreenlockerrc",
+        ".config/kwinrc",
+        ".config/gtkrc",
+        ".config/gtkrc-2.0",
+        ".config/gtk-4.0/",
+        ".config/gtk-3.0/",
+        ".config/gtk-2.0/",
+        ".config/ksplashrc",
     ],
     "kvantum": ".config/Kvantum",
     "dolphin": ".config/dolphinrc",
     "kate": [
-        ".config/katemetainfos", ".config/katerc", ".config/kateschemarc",
-        ".config/katesyntaxhighlightingrc", ".config/katevirc"
+        ".config/katemetainfos",
+        ".config/katerc",
+        ".config/kateschemarc",
+        ".config/katesyntaxhighlightingrc",
+        ".config/katevirc",
     ],
     "kcalc": ".config/kcalcrc",
     "konsole": ".config/kconsolerc",
@@ -44,7 +53,7 @@ kdePath = {
     "userFeedback": ".config/PlasmaUserFeedback",
     "layout": ".config/kxkbrc",
     "gamma": ".config/kgammarc",
-    "energySaving": ".config/powermanagementprofilesrc"
+    "energySaving": ".config/powermanagementprofilesrc",
 }
 
 for key in kdePath.keys():
@@ -55,61 +64,81 @@ for key in kdePath.keys():
         kdePath[key] = path.join(environ["HOME"], kdePath[key])
 
 parser = argparse.ArgumentParser(
-    description=
-    "utility to restore configuration on a new arch install. Files MUST have a package on every line",
-    allow_abbrev=False)
+    description="utility to restore configuration on a new arch install. Files MUST have a package on every line",
+    allow_abbrev=False,
+)
 group = parser.add_mutually_exclusive_group()
 subparser = parser.add_subparsers(help="backup utility help")
 backup = subparser.add_parser("backup")
 
-group.add_argument("-i",
-                   "--install",
-                   metavar="<pkgFile>",
-                   dest="pkgFile",
-                   help="install packages from a file with pacman")
+group.add_argument(
+    "-i",
+    "--install",
+    metavar="<pkgFile>",
+    dest="pkgFile",
+    help="install packages from a file with pacman",
+)
 group.add_argument(
     "--installPikaur",
     metavar="<aurPkgFile>",
     dest="aurPkgFile",
-    help=
-    "install packages in file from aur with pikaur. If pikaur is not istalled, it will ask if it can be installed"
+    help="install packages in file from aur with pikaur. If pikaur is not istalled, it will ask if it can be installed",
 )
 group.add_argument(
     "--base-system",
     metavar=("<pathInstall>", "<strapPkgFile>"),
     nargs=2,
-    help="install all packages in strapPkgFile with pacstrap into pathInstall")
-backup.add_argument("--pacman",
-                    dest="pkgFileBack",
-                    metavar="<pkgFile>",
-                    help="create file with all packages installed from pacman")
-backup.add_argument("--aur",
-                    dest="aurPkgFileBack",
-                    metavar="<aurPkgFile>",
-                    help="create file with all packages installed from aur")
-backup.add_argument("--kde",
-                    metavar="file.zip",
-                    const="kdeConfig.zip",
-                    nargs="?",
-                    help="create a backup of all kde config")
-parser.add_argument("--restore-kde",
-                    metavar="<file.zip>",
-                    dest="backFile",
-                    help="restore kde config files")
-parser.add_argument("--base-config",
-                    action="store_true",
-                    help="set a base configuration on a new arch installation")
+    help="install all packages in strapPkgFile with pacstrap into pathInstall",
+)
+backup.add_argument(
+    "--pacman",
+    dest="pkgFileBack",
+    metavar="<pkgFile>",
+    help="create file with all packages installed from pacman",
+)
+backup.add_argument(
+    "--aur",
+    dest="aurPkgFileBack",
+    metavar="<aurPkgFile>",
+    help="create file with all packages installed from aur",
+)
+backup.add_argument(
+    "--kde",
+    metavar="file.zip",
+    const="kdeConfig.zip",
+    nargs="?",
+    help="create a backup of all kde config",
+)
+parser.add_argument(
+    "--restore-kde",
+    metavar="<file.zip>",
+    dest="backFile",
+    help="restore kde config files",
+)
+parser.add_argument(
+    "--base-config",
+    action="store_true",
+    help="set a base configuration on a new arch installation",
+)
 
 args, unknown = parser.parse_known_args()
 
 
 def baseSystemInstall(pathInstall, pstrapPkgFile):
-    if pathInstall[-1] == '/':
+    if pathInstall[-1] == "/":
         pathInstall = pathInstall[:-1]
     command = "pacstrap " + pathInstall + " "
+    print("Ucode type:\n1) amd-ucode\n2) intel-ucode")
+    type = int(input("Select type: "))
+    if type == 1:
+        command += "amd-ucode "
+    elif type == 2:
+        command += "intel-ucode "
+    else:
+        exit("Insert only 1 or 2")
     with open(pstrapPkgFile) as file:
         for pkg in file:
-            command += (pkg.strip() + " ")
+            command += pkg.strip() + " "
         if input("Are you sure you want to continue? [y/N] ").lower() == "y":
             system(command)
             system(f"genfstab -U '{pathInstall}' >> '{pathInstall}'/etc/fstab")
@@ -117,11 +146,11 @@ def baseSystemInstall(pathInstall, pstrapPkgFile):
 
 def installPacman(pkgFile):
     with open(pkgFile) as pkgList:
-        command = "pacman -S --needed "
+        command = "pacman -S --needed --noconfirm "
         for pkg in pkgList:
             if "#" not in pkg:
-                command += (pkg.strip() + " ")
-        if (getpass.getuser() == "root"):
+                command += pkg.strip() + " "
+        if getpass.getuser() == "root":
             system(command)
         else:
             exit("You need root permissions to do this")
@@ -130,7 +159,7 @@ def installPacman(pkgFile):
 def installPikaur(pkgFile):
     if not path.isfile("/usr/bin/pikaur"):
         choise = input("Do you want to install pikaur? [Y/n] ").strip().lower()
-        if (choise != "y") and (choise != "n") and (choise != ''):
+        if (choise != "y") and (choise != "n") and (choise != ""):
             exit("Input not valid")
         elif choise == "n":
             exit("Pikaur needed")
@@ -141,11 +170,11 @@ def installPikaur(pkgFile):
         chdir(oldCwd)
         system("rm -r pikaur")
     with open(pkgFile) as pkgList:
-        command = "pikaur -S --nodiff --noedit "
+        command = "pikaur -S --nodiff --noedit --noconfirm "
         for pkg in pkgList:
             if "#" not in pkg:
-                command += (pkg.strip() + " ")
-        if (getpass.getuser() != "root"):
+                command += pkg.strip() + " "
+        if getpass.getuser() != "root":
             system(command)
         else:
             exit("You not need root permissions to do this")
@@ -157,7 +186,8 @@ def backupPkgs(pkgFile, isPacman=True):
             proc = subprocess.run(
                 'pacman -Qqe | grep -vx "$(pacman -Qqg base-devel)" | grep -vx "$(pacman -Qqm)"',
                 shell=True,
-                capture_output=True)
+                capture_output=True,
+            )
         else:
             proc = subprocess.run(["pacman", "-Qqm"], capture_output=True)
         pkgList.write(proc.stdout.decode("utf-8"))
@@ -169,11 +199,12 @@ def _zipdir(pathDir, ziph):
         for file in files:
             ziph.write(
                 path.join(root, file),
-                path.relpath(path.join(root, file), path.join(pathDir, '..')))
+                path.relpath(path.join(root, file), path.join(pathDir, "..")),
+            )
 
 
 def backupKDE(zipPath):
-    with ZipFile(zipPath, 'w') as zipF:
+    with ZipFile(zipPath, "w") as zipF:
         for key in kdePath.keys():
             if isinstance(kdePath[key], list):
                 for val in kdePath[key]:
@@ -181,19 +212,21 @@ def backupKDE(zipPath):
                         _zipdir(val, zipF)
                     elif path.isfile(val):
                         zipF.write(
-                            val,
-                            path.relpath(val,
-                                         path.join(path.split(val)[0], '.')))
+                            val, path.relpath(val, path.join(path.split(val)[0], "."))
+                        )
             elif path.isdir(kdePath[key]):
                 _zipdir(kdePath[key], zipF)
             elif path.isfile(kdePath[key]):
                 zipF.write(
                     kdePath[key],
-                    path.relpath(kdePath[key],
-                                 path.join(path.split(kdePath[key])[0], '.')))
+                    path.relpath(
+                        kdePath[key], path.join(path.split(kdePath[key])[0], ".")
+                    ),
+                )
+
 
 def baseConfiguration():
-    if (getpass.getuser() == "root"):
+    if getpass.getuser() == "root":
         # set time zone
         zone = input("Insert time zone (ex Europe/Rome): ")
         system(f"ln -sf /usr/share/zoneinfo/{zone} /etc/localtime")
@@ -201,7 +234,7 @@ def baseConfiguration():
         # set italian and english in locale.gen
         system("sed -i -e 's/#it_IT.UTF-8 UTF-8/it_IT.UTF-8 UTF-8/' /etc/locale.gen")
         system("sed -i -e 's/#en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen")
-        system('locale-gen')
+        system("locale-gen")
         # set keymap in vconsole
         system("echo 'KEYMAP=it' > /etc/vconsole.conf")
         # set hostname
@@ -222,27 +255,32 @@ def baseConfiguration():
         print("Change root password")
         system("passwd root")
         # grub
-        system("grub-install --target=x86_64-efi --efi-directory=/boot/efi/ --bootloader-id=GRUB")
+        system(
+            "grub-install --target=x86_64-efi --efi-directory=/boot/efi/ --bootloader-id=GRUB"
+        )
+        choice = input("Do you want dual boot? [y/N] ").strip().lower()
+        if choice == "y":
+            system("pacman -S --noconfirm efibootmgr os-prober")
         with open("/etc/default/grub") as fin:
             data = fin.readlines()
-            choice = input("Do you want disable OS_PROBER? [y/N] ")
             for i in range(len(data)):
-                if choice.strip().lower() == "y":
+                if choice == "y":
                     if "GRUB_CMDLINE_LINUX=" in data[i]:
                         data.insert(i + 1, "GRUB_DISABLE_OS_PROBER=false\n")
                 if "GRUB_THEME" in data[i]:
-                    data[i] = "GRUB_THEME=\"/usr/share/grub/themes/Vimix/theme.txt\"\n\n"
+                    data[i] = 'GRUB_THEME="/usr/share/grub/themes/Vimix/theme.txt"\n\n'
                     break
         with open("/etc/default/grub", "w") as fout:
             fout.writelines(data)
         system("grub-mkconfig -o /boot/grub/grub.cfg")
         system("systemctl enable NetworkManager")
+        system("systemctl enable reflector.timer")
+        system("systemctl enable fstrim.timer")
     else:
         exit("You need root permissions to do this")
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) == 1:
         parser.print_help()
         exit(0)
@@ -263,7 +301,7 @@ if __name__ == '__main__':
         if args.aurPkgFile is not None:
             installPikaur(args.aurPkgFile)
         if args.backFile is not None:
-            #TODO: function to restore kde settings
+            # TODO: function to restore kde settings
             pass
         if args.base_config:
             baseConfiguration()
