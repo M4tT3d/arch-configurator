@@ -139,7 +139,7 @@ def baseSystemInstall(pathInstall, pstrapPkgFile):
     with open(pstrapPkgFile) as file:
         for pkg in file:
             command += pkg.strip() + " "
-        if input("Are you sure you want to continue? [y/N] ").lower() == "y":
+        if input("Are you sure you want to continue? [y/N] ").strip().lower() == "y":
             system(command)
             system(f"genfstab -U '{pathInstall}' >> '{pathInstall}'/etc/fstab")
 
@@ -276,6 +276,17 @@ def baseConfiguration():
         system("systemctl enable NetworkManager")
         system("systemctl enable reflector.timer")
         system("systemctl enable fstrim.timer")
+        choice = (
+            input(
+                "Do you want to activate an hook to automatic clean pacman cache? (Y/n)"
+            )
+            .strip()
+            .lower()
+        )
+        if choice == "n":
+            return
+        system("pacman -S --noconfirm --needed pacman-contrib")
+        system("cp clean_pacman_cache.hook /etc/pacman.d/hook/")
     else:
         exit("You need root permissions to do this")
 
