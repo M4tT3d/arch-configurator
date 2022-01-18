@@ -38,6 +38,7 @@ class Setupper:
             "/dev/" + os.path.basename(os.path.dirname(d))
             for d in glob("/sys/block/*/device")
         ]
+        disks.sort()
         print(
             """
 ------------------------------------------------------------------------
